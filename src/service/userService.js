@@ -14,7 +14,7 @@ export const loginUser = async ({ username, password }) => {
     });
 
     if (!user) {
-        throw new Error('uUser Tidak Ditemukan');
+        throw new Error('User Tidak Ditemukan');
     }
 
     const isMatch = await comparePassword(password, user.password);
@@ -26,4 +26,15 @@ export const loginUser = async ({ username, password }) => {
     const token = generateToken({ id: user.id, username: user.username, role: user.role });
 
     return { user, token };
+};
+
+export const getOneUser = async (id) => {
+    const user = await prisma.user.findUnique({
+        where: { id },
+        select: {
+            username: true,
+            role: true,
+        },
+    });
+    return user;
 };

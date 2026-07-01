@@ -1,4 +1,4 @@
-import { loginUser } from '../service/userService.js';
+import { getOneUser, loginUser } from '../service/userService.js';
 
 export const login = async (req, res) => {
     try {
@@ -20,6 +20,29 @@ export const login = async (req, res) => {
                 role: user.role,
                 token,
             },
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+        });
+    }
+};
+
+export const logout = (req, res) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax', // ← harus sama dengan saat set cookie
+    });
+    res.status(200).json({ message: 'Logout Berhasil' });
+};
+
+export const getMe = async (req, res) => {
+    try {
+        const user = await getOneUser(req.user.id);
+        res.status(200).json({
+            message: 'Berhasil',
+            data: user,
         });
     } catch (error) {
         res.status(500).json({
