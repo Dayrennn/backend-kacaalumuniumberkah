@@ -7,8 +7,8 @@ export const login = async (req, res) => {
 
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'development',
-            samesite: 'none',
+            secure: true,
+            sameSite: 'none',
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
@@ -31,8 +31,9 @@ export const login = async (req, res) => {
 export const logout = (req, res) => {
     res.clearCookie('token', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax', // ← harus sama dengan saat set cookie
+        secure: true,
+        sameSite: 'none',
+        path: '/',
     });
     res.status(200).json({ message: 'Logout Berhasil' });
 };
