@@ -32,7 +32,8 @@ export const seeAllKategori = async (req, res) => {
 export const removeKategori = async (req, res) => {
     try {
         const { id } = req.params;
-        await deleteKategori(id);
+        const { namaKategori } = req.body;
+        await deleteKategori(id, { namaKategori });
         res.status(200).json({
             message: 'Berhasil Menghapus Data',
         });

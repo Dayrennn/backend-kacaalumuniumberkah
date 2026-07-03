@@ -26,15 +26,34 @@ export const addKategori = async ({ namaKategori, status }) => {
 };
 
 export const getAllKategori = async () => {
-    const result = await prisma.kategori.findMany({
-        select: {
-            id: true,
-            namaKategori: true,
-            status: true,
+    const [kategori, totalKategori, totalKategoriAktif, totalKategoriNonaktif] = await prisma.$transaction([
+        prisma.kategori.findMany({
+            select: {
+                id: true,
+                namaKategori: true,
+                status: true,
+            },
+        }),
+        prisma.kategori.count(),
+        prisma.kategori.count({
+            where: {
+                status: 'Aktif',
+            },
+        }),
+        prisma.kategori.count({
+            where: {
+                status: 'Nonaktif',
+            },
+        }),
+    ]);
+    return {
+        kategori,
+        summary: {
+            totalKategori,
+            totalKategoriAktif,
+            totalKategoriNonaktif,
         },
-    });
-
-    return result;
+    };
 };
 
 export const updateKategori = async (id, { namaKategori, status }) => {
@@ -67,16 +86,22 @@ export const updateKategori = async (id, { namaKategori, status }) => {
     return update;
 };
 
-export const deleteKategori = async (id) => {
-    const existingKategori = await prisma.kategori.findFirst({
-        where: {
-            namaKategori,
-        },
+export const deleteKategori = async (id, { namaKategori }) => {
+    // 1. Ambil data asli berdasarkan ID yang mau dihapus
+    const existingKategori = await prisma.kategori.findUnique({
+        where: { id },
     });
 
     if (!existingKategori) {
-        throw new Error('Nama Kategori Tidak Ditemukan');
+        throw new Error('Kategori Tidak Ditemukan');
     }
+
+    // 2. Cocokkan nama yang diketik user dengan nama asli
+    if (existingKategori.namaKategori !== namaKategori) {
+        throw new Error('Nama Kategori Tidak Sesuai');
+    }
+
+    // 3. Baru hapus berdasarkan ID (unique field)
     const remove = await prisma.kategori.delete({
         where: { id },
     });
