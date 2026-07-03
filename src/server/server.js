@@ -13,7 +13,7 @@ const port = 3000;
 app.use(morgan('dev'));
 app.use(
     cors({
-        origin: ['http://localhost:3001', "https://berkahkacaalumunium.netlify.app"],
+        origin: ['http://localhost:3001', "https://berkahkacaalumunium-backend.netlify.app"],
         credentials: true,
     }),
 );
