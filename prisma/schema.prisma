@@ -24,9 +24,23 @@ model Kategori {
   id String @id @default(uuid())
   namaKategori String 
   status Status @default(Aktif)
+
+  barang Barang[]
 }
 
 enum Status {
   Aktif
   Nonaktif
+}
+
+model Barang {
+  id String @id @default(uuid())
+  kategoriId String
+  namaBarang String
+  kodeBarang String?
+  jumlahBarang Int
+  status Status @default(Aktif)
+  ukuran String
+
+  kategori Kategori @relation(fields: [kategoriId], references: [id])
 }
