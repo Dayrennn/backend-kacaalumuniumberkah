@@ -92,3 +92,23 @@ export const updateBarang = async (id, { kategoriId, namaBarang, status, ukuran,
 
     return update;
 };
+
+export const deleteBarang = async (id, { namaBarang }) => {
+    const existingBarang = await prisma.barang.findUnique({
+        where: { id },
+    });
+
+    if (!existingBarang) {
+        throw new Error('Barang Tidak Ditemukan');
+    }
+
+    if (existingBarang.namaBarang !== namaBarang) {
+        throw new Error('Nama Barang Tidak Sesuai');
+    }
+
+    const remove = await prisma.barang.delete({
+        where: { id },
+    });
+
+    return remove;
+};
