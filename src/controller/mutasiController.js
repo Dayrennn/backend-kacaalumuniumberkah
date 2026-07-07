@@ -34,7 +34,7 @@ export const seeAllMutasiMasuk = async (req, res) => {
     }
 };
 
-export const handleGetMutasiMasukByBarang = async (req, res) => {
+export const seeMutasiMasukByBarang = async (req, res) => {
     try {
         const { barangId } = req.params;
 
