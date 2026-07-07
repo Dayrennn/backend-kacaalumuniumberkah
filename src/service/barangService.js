@@ -37,6 +37,19 @@ export const addBarang = async ({ kategoriId, namaBarang, jumlahBarang, status, 
     return newBarang;
 };
 
+export const getBarangAktif = async () => {
+    const barangAktif = await prisma.barang.findMany({
+        where: {
+            status: 'Aktif',
+        },
+        include: {
+            kategori: true,
+        },
+    });
+
+    return barangAktif;
+};
+
 export const getAllBarang = async () => {
     const [barang, totalBarang, barangAktif, barangNonaktif] = await prisma.$transaction([
         prisma.barang.findMany({

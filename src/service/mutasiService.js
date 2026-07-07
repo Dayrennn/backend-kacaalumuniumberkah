@@ -22,6 +22,10 @@ export const barangMasuk = async ({ barangId, jumlah, keterangan }, userId) => {
         throw new Error('Barang Tidak Ditemukan');
     }
 
+    if (barang.status !== 'Aktif') {
+        throw new Error('Barang Tidak Aktif, Stok Tidak Bisa Ditambah');
+    }
+
     const stokSebelum = barang.jumlahBarang;
     const stokSesudah = stokSebelum + jumlah;
 

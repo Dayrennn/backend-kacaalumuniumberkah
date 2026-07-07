@@ -1,4 +1,4 @@
-import { addBarang, deleteBarang, getAllBarang, updateBarang } from '../service/barangService.js';
+import { addBarang, deleteBarang, getAllBarang, getBarangAktif, updateBarang } from '../service/barangService.js';
 
 export const createBarang = async (req, res) => {
     try {
@@ -6,6 +6,20 @@ export const createBarang = async (req, res) => {
         const result = await addBarang({ kategoriId, namaBarang, kodeBarang, jumlahBarang, ukuran });
         res.status(200).json({
             message: 'Berhasil Tambah Data Barang',
+            data: result,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+        });
+    }
+};
+
+export const seeBarangAktif = async (req, res) => {
+    try {
+        const result = await getBarangAktif();
+        res.status(200).json({
+            message: 'Berhasil Ambil Data Barang Aktif',
             data: result,
         });
     } catch (error) {
