@@ -56,9 +56,33 @@ export const barangMasuk = async ({ barangId, jumlah, keterangan }, userId) => {
     return mutasi;
 };
 
-export const getAllMutasiMasuk = async () => {
+export const getAllMutasiMasuk = async ({ startDate, endDate } = {}) => {
+    const where = { tipe: 'Masuk' };
+
+    if (startDate || endDate) {
+        where.createdAt = {};
+
+        if (startDate) {
+            const start = new Date(startDate);
+            if (isNaN(start.getTime())) {
+                throw new Error('Format Start Date Tidak Valid');
+            }
+            start.setHours(0, 0, 0, 0);
+            where.createdAt.gte = start;
+        }
+
+        if (endDate) {
+            const end = new Date(endDate);
+            if (isNaN(end.getTime())) {
+                throw new Error('Format End Date Tidak Valid');
+            }
+            end.setHours(23, 59, 59, 999);
+            where.createdAt.lte = end;
+        }
+    }
+
     const result = await prisma.mutasiStok.findMany({
-        where: { tipe: 'Masuk' },
+        where,
         include: {
             barang: true,
             user: {
@@ -150,9 +174,33 @@ export const barangKeluar = async ({ barangId, jumlah, keterangan }, userId) => 
     return mutasi;
 };
 
-export const getAllMutasiKeluar = async () => {
+export const getAllMutasiKeluar = async ({ startDate, endDate } = {}) => {
+    const where = { tipe: 'Keluar' };
+
+    if (startDate || endDate) {
+        where.createdAt = {};
+
+        if (startDate) {
+            const start = new Date(startDate);
+            if (isNaN(start.getTime())) {
+                throw new Error('Format Start Date Tidak Valid');
+            }
+            start.setHours(0, 0, 0, 0);
+            where.createdAt.gte = start;
+        }
+
+        if (endDate) {
+            const end = new Date(endDate);
+            if (isNaN(end.getTime())) {
+                throw new Error('Format End Date Tidak Valid');
+            }
+            end.setHours(23, 59, 59, 999);
+            where.createdAt.lte = end;
+        }
+    }
+
     const result = await prisma.mutasiStok.findMany({
-        where: { tipe: 'Keluar' },
+        where,
         include: {
             barang: true,
             user: {

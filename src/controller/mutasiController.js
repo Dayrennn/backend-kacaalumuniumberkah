@@ -23,13 +23,15 @@ export const addBarangMasuk = async (req, res) => {
             data: result,
         });
     } catch (error) {
-        return res.status(400).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 };
 
 export const seeAllMutasiMasuk = async (req, res) => {
     try {
-        const result = await getAllMutasiMasuk();
+        const { startDate, endDate } = req.query;
+
+        const result = await getAllMutasiMasuk({ startDate, endDate });
 
         return res.status(200).json({
             message: 'Berhasil Mengambil Data Mutasi Masuk',
@@ -51,7 +53,7 @@ export const seeMutasiMasukByBarang = async (req, res) => {
             data: result,
         });
     } catch (error) {
-        return res.status(400).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 };
 
@@ -72,13 +74,14 @@ export const addBarangKeluar = async (req, res) => {
             data: result,
         });
     } catch (error) {
-        return res.status(400).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 };
 
 export const seeAllMutasiKeluar = async (req, res) => {
     try {
-        const result = await getAllMutasiKeluar();
+        const { startDate, endDate } = req.query;
+        const result = await getAllMutasiKeluar({ startDate, endDate });
 
         return res.status(200).json({
             message: 'Berhasil Mengambil Data Mutasi Keluar',
