@@ -12,16 +12,16 @@ export const addBarang = async ({ kategoriId, namaBarang, jumlahBarang, status, 
         throw new Error('Ukuran Wajib Diisi');
     }
 
-    const existingBarang = await prisma.barang.findFirst({
-        where: {
-            kategoriId,
-            namaBarang,
-        },
-    });
+    // const existingBarang = await prisma.barang.findFirst({
+    //     where: {
+    //         kategoriId,
+    //         namaBarang,
+    //     },
+    // });
 
-    if (existingBarang) {
-        throw new Error('Nama Barang Sudah Ada');
-    }
+    // if (existingBarang) {
+    //     throw new Error('Nama Barang Sudah Ada');
+    // }
 
     const newBarang = await prisma.barang.create({
         data: {
@@ -38,13 +38,32 @@ export const addBarang = async ({ kategoriId, namaBarang, jumlahBarang, status, 
 };
 
 export const getAllBarang = async () => {
-    const result = await prisma.barang.findMany({
-        include: {
-            kategori: true,
+    const [barang, totalBarang, barangAktif, barangNonaktif] = await prisma.$transaction([
+        prisma.barang.findMany({
+            include: {
+                kategori: true,
+            },
+        }),
+        prisma.barang.count(),
+        prisma.barang.count({
+            where: {
+                status: 'Aktif',
+            },
+        }),
+        prisma.barang.count({
+            where: {
+                status: 'Nonaktif',
+            },
+        }),
+    ]);
+    return {
+        barang,
+        summary: {
+            totalBarang,
+            barangAktif,
+            barangNonaktif,
         },
-    });
-
-    return result;
+    };
 };
 
 export const updateBarang = async (id, { kategoriId, namaBarang, status, ukuran, kodeBarang }) => {

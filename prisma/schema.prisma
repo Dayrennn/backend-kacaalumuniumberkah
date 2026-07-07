@@ -12,6 +12,8 @@ model User {
     username String @unique
     role Role
     password String
+
+    mutasi MutasiStok[]
 }
 
 enum Role {
@@ -43,4 +45,28 @@ model Barang {
   ukuran String
 
   kategori Kategori @relation(fields: [kategoriId], references: [id])
+  mutasi MutasiStok[]
+}
+
+enum TipeMutasi {
+  Masuk
+  Keluar
+}
+
+model MutasiStok {
+  id          String     @id @default(uuid())
+  barangId    String
+  userId      String
+  tipe        TipeMutasi
+  jumlah      Int
+  stokSebelum Int
+  stokSesudah Int
+  keterangan  String?
+  createdAt   DateTime   @default(now())
+
+  barang Barang @relation(fields: [barangId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([barangId, createdAt])
+  @@index([tipe])
 }

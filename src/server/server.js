@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import userRoutes from '../routes/userRoutes.js';
 import kategoriRoutes from '../routes/kategoriRoutes.js';
 import barangRoutes from '../routes/barangRoutes.js';
+import mutasiRoutes from '../routes/mutasiRoutes.js';
 
 const app = express();
 const port = 3000;
@@ -25,6 +26,7 @@ app.use(cookieParser());
 app.use('/auth', userRoutes);
 app.use('/kategori', kategoriRoutes);
 app.use('/barang', barangRoutes);
+app.use('/mutasi', mutasiRoutes);
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
