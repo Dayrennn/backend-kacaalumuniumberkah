@@ -46,6 +46,7 @@ model Barang {
 
   kategori Kategori @relation(fields: [kategoriId], references: [id])
   mutasi MutasiStok[]
+  produk ProdukAds[]
 }
 
 enum TipeMutasi {
@@ -69,4 +70,13 @@ model MutasiStok {
 
   @@index([barangId, createdAt])
   @@index([tipe])
+}
+
+model ProdukAds {
+  id String @id @default(uuid())
+  barangId String @unique
+  produkImageUrl String
+  deskripsi String
+
+  barang Barang @relation(fields: [barangId], references: [id])
 }

@@ -2,12 +2,14 @@ import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import path from 'path';
 
 // import router
 import userRoutes from '../routes/userRoutes.js';
 import kategoriRoutes from '../routes/kategoriRoutes.js';
 import barangRoutes from '../routes/barangRoutes.js';
 import mutasiRoutes from '../routes/mutasiRoutes.js';
+import produkAds from '../routes/produkAdsRoutes.js';
 
 const app = express();
 const port = 3000;
@@ -22,11 +24,14 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // app router
 app.use('/auth', userRoutes);
 app.use('/kategori', kategoriRoutes);
 app.use('/barang', barangRoutes);
 app.use('/mutasi', mutasiRoutes);
+app.use('/produk-ads', produkAds);
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
