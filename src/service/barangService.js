@@ -88,14 +88,14 @@ export const updateBarang = async (id, { kategoriId, namaBarang, status, ukuran,
         throw new Error('Barang Tidak Ditemukan');
     }
 
-    if (namaBarang) {
-        const existing = await prisma.barang.findFirst({
-            where: { namaBarang, kategoriId: kategoriId ?? existingBarang.kategoriId, NOT: { id } },
-        });
-        if (existing) {
-            throw new Error('Nama Barang Sudah Digunakan');
-        }
-    }
+    // if (namaBarang) {
+    //     const existing = await prisma.barang.findFirst({
+    //         where: { namaBarang, kategoriId: kategoriId ?? existingBarang.kategoriId, NOT: { id } },
+    //     });
+    //     if (existing) {
+    //         throw new Error('Nama Barang Sudah Digunakan');
+    //     }
+    // }
 
     const data = {};
     if (namaBarang) {
