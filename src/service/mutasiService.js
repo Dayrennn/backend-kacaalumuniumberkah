@@ -56,7 +56,7 @@ export const barangMasuk = async ({ barangId, jumlah, keterangan }, userId) => {
     return mutasi;
 };
 
-export const getAllMutasiMasuk = async ({ startDate, endDate } = {}) => {
+export const getAllMutasiMasuk = async ({ startDate, endDate, page = 1, limit = 10 } = {}) => {
     const where = { tipe: 'Masuk' };
 
     if (startDate || endDate) {
@@ -81,18 +81,37 @@ export const getAllMutasiMasuk = async ({ startDate, endDate } = {}) => {
         }
     }
 
-    const result = await prisma.mutasiStok.findMany({
-        where,
-        include: {
-            barang: true,
-            user: {
-                select: { id: true, username: true, role: true },
-            },
-        },
-        orderBy: { createdAt: 'desc' },
-    });
+    // Pastikan page & limit berupa angka positif
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.max(1, parseInt(limit));
+    const skip = (pageNum - 1) * limitNum;
 
-    return result;
+    // Jalankan query data + count total secara paralel biar lebih cepat
+    const [result, total] = await Promise.all([
+        prisma.mutasiStok.findMany({
+            where,
+            include: {
+                barang: true,
+                user: {
+                    select: { id: true, username: true, role: true },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+            skip,
+            take: limitNum,
+        }),
+        prisma.mutasiStok.count({ where }),
+    ]);
+
+    return {
+        data: result,
+        meta: {
+            total,
+            page: pageNum,
+            limit: limitNum,
+            totalPages: Math.ceil(total / limitNum),
+        },
+    };
 };
 
 export const getMutasiMasukByBarang = async (barangId) => {
@@ -174,7 +193,7 @@ export const barangKeluar = async ({ barangId, jumlah, keterangan }, userId) => 
     return mutasi;
 };
 
-export const getAllMutasiKeluar = async ({ startDate, endDate } = {}) => {
+export const getAllMutasiKeluar = async ({ startDate, endDate, page = 1, limit = 10 } = {}) => {
     const where = { tipe: 'Keluar' };
 
     if (startDate || endDate) {
@@ -199,16 +218,39 @@ export const getAllMutasiKeluar = async ({ startDate, endDate } = {}) => {
         }
     }
 
-    const result = await prisma.mutasiStok.findMany({
-        where,
-        include: {
-            barang: true,
-            user: {
-                select: { id: true, username: true, role: true },
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.max(1, parseInt(limit));
+    const skip = (pageNum - 1) * limitNum;
+
+    const [result, total] = await Promise.all([
+        prisma.mutasiStok.findMany({
+            where,
+            include: {
+                barang: true,
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        role: true,
+                    },
+                },
             },
+            orderBy: { createdAt: 'desc' },
+            skip,
+            take: limitNum,
+        }),
+        prisma.mutasiStok.count({ where }),
+    ]);
+
+    return {
+        data: result,
+        meta: {
+            total,
+            page: pageNum,
+            limit: limitNum,
+            totalPages: Math.ceil(total / limitNum),
         },
-        orderBy: { createdAt: 'desc' },
-    });
+    };
 
     return result;
 };

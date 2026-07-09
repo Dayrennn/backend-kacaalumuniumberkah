@@ -29,9 +29,9 @@ export const addBarangMasuk = async (req, res) => {
 
 export const seeAllMutasiMasuk = async (req, res) => {
     try {
-        const { startDate, endDate } = req.query;
+        const { startDate, endDate, page, limit } = req.query;
 
-        const result = await getAllMutasiMasuk({ startDate, endDate });
+        const result = await getAllMutasiMasuk({ startDate, endDate, page, limit });
 
         return res.status(200).json({
             message: 'Berhasil Mengambil Data Mutasi Masuk',
@@ -80,8 +80,8 @@ export const addBarangKeluar = async (req, res) => {
 
 export const seeAllMutasiKeluar = async (req, res) => {
     try {
-        const { startDate, endDate } = req.query;
-        const result = await getAllMutasiKeluar({ startDate, endDate });
+        const { startDate, endDate, page, limit } = req.query;
+        const result = await getAllMutasiKeluar({ startDate, endDate, page, limit });
 
         return res.status(200).json({
             message: 'Berhasil Mengambil Data Mutasi Keluar',
