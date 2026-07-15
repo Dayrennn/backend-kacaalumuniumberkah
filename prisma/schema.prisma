@@ -35,6 +35,11 @@ enum Status {
   Nonaktif
 }
 
+enum jenisPenjualan {
+  PCS
+  Potongan
+}
+
 model Barang {
   id String @id @default(uuid())
   kategoriId String
@@ -43,6 +48,8 @@ model Barang {
   jumlahBarang Int
   status Status @default(Aktif)
   ukuran String
+  harga Float
+  jenisPenjualan jenisPenjualan @default(PCS)
 
   kategori Kategori @relation(fields: [kategoriId], references: [id])
   mutasi MutasiStok[]
@@ -63,6 +70,9 @@ model MutasiStok {
   stokSebelum Int
   stokSesudah Int
   keterangan  String?
+  panjangCustom Float?  
+  lebarCustom   Float?   
+  totalHarga    Float?    
   createdAt   DateTime   @default(now())
 
   barang Barang @relation(fields: [barangId], references: [id])

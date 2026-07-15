@@ -1,6 +1,15 @@
 import prisma from '../config/prisma.js';
 
-export const addBarang = async ({ kategoriId, namaBarang, jumlahBarang, status, ukuran, kodeBarang }) => {
+export const addBarang = async ({
+    kategoriId,
+    namaBarang,
+    jumlahBarang,
+    status,
+    ukuran,
+    kodeBarang,
+    harga,
+    jenisPenjualan,
+}) => {
     if (!kategoriId) {
         throw new Error('Kategori Id Tidak Ditemukan');
     }
@@ -10,6 +19,10 @@ export const addBarang = async ({ kategoriId, namaBarang, jumlahBarang, status, 
     }
     if (!ukuran?.trim()) {
         throw new Error('Ukuran Wajib Diisi');
+    }
+
+    if (!harga && harga !== 0) {
+        throw new Error('Harga Wajib Diisi');
     }
 
     // const existingBarang = await prisma.barang.findFirst({
@@ -30,6 +43,8 @@ export const addBarang = async ({ kategoriId, namaBarang, jumlahBarang, status, 
             kodeBarang: kodeBarang,
             jumlahBarang: jumlahBarang,
             ukuran: ukuran,
+            harga: harga,
+            ...(jenisPenjualan && { jenisPenjualan }),
             ...(status && { status }),
         },
     });
@@ -143,4 +158,18 @@ export const deleteBarang = async (id, { namaBarang }) => {
     });
 
     return remove;
+};
+
+export const getBarangPotongan = async () => {
+    const potongan = await prisma.barang.findFirst({
+        where: {
+            jenisPenjualan: 'Potongan',
+        },
+        include: {
+            kategori: true,
+            mutasi: true,
+        },
+    });
+
+    return potongan;
 };

@@ -1,4 +1,5 @@
 import prisma from '../config/prisma.js';
+import { hitungTotalHarga } from '../utils/hitungTotalHarga.js';
 
 // barang masuk
 export const barangMasuk = async ({ barangId, jumlah, keterangan }, userId) => {
@@ -137,7 +138,10 @@ export const getMutasiMasukByBarang = async (barangId) => {
 };
 
 // barang keluar
-export const barangKeluar = async ({ barangId, jumlah, keterangan }, userId) => {
+export const barangKeluar = async (
+    { barangId, jumlah, keterangan, ambilDariLembaran, panjangCustom, lebarCustom },
+    userId,
+) => {
     if (!barangId) {
         throw new Error('Barang Id Tidak Ditemukan');
     }
@@ -158,19 +162,42 @@ export const barangKeluar = async ({ barangId, jumlah, keterangan }, userId) => 
         throw new Error('Barang Tidak Ditemukan');
     }
 
-    // validasi stok cukup atau tidak
-    if (barang.jumlahBarang < jumlah) {
-        throw new Error('Stok Barang Tidak Mencukupi');
+    if (barang.jenisPenjualan === 'Potongan' && ambilDariLembaran === undefined) {
+        throw new Error('Wajib Pilih Sumber Bahan (Ambil Dari Lembaran / Sisa)');
     }
 
-    const stokSebelum = barang.jumlahBarang;
-    const stokSesudah = stokSebelum - jumlah;
+    // hitung harga (akan melempar error kalau Potongan tapi panjang/lebar belum diisi)
+    const { totalHarga } = hitungTotalHarga(barang, { jumlah, panjangCustom, lebarCustom });
 
-    const [updatedBarang, mutasi] = await prisma.$transaction([
-        prisma.barang.update({
-            where: { id: barangId },
-            data: { jumlahBarang: stokSesudah },
-        }),
+    const stokBerkurang = !(barang.jenisPenjualan === 'Potongan' && ambilDariLembaran === false);
+
+    const stokSebelum = barang.jumlahBarang;
+    let stokSesudah = stokSebelum;
+
+    if (stokBerkurang) {
+        if (barang.jumlahBarang < jumlah) {
+            throw new Error('Stok Barang Tidak Mencukupi');
+        }
+        stokSesudah = stokSebelum - jumlah;
+    }
+
+    const catatan = stokBerkurang
+        ? keterangan
+        : `${keterangan ? keterangan + ' - ' : ''}Diambil dari sisa potongan, stok tidak berkurang`;
+
+    const operations = [];
+
+    if (stokBerkurang) {
+        operations.push(
+            prisma.barang.update({
+                where: { id: barangId },
+                data: { jumlahBarang: stokSesudah },
+            }),
+        );
+    }
+
+    const mutasiIndex = operations.length;
+    operations.push(
         prisma.mutasiStok.create({
             data: {
                 barangId,
@@ -179,7 +206,10 @@ export const barangKeluar = async ({ barangId, jumlah, keterangan }, userId) => 
                 jumlah,
                 stokSebelum,
                 stokSesudah,
-                keterangan,
+                keterangan: catatan,
+                panjangCustom: barang.jenisPenjualan === 'Potongan' ? panjangCustom : null,
+                lebarCustom: barang.jenisPenjualan === 'Potongan' ? lebarCustom : null,
+                totalHarga,
             },
             include: {
                 barang: true,
@@ -188,7 +218,10 @@ export const barangKeluar = async ({ barangId, jumlah, keterangan }, userId) => 
                 },
             },
         }),
-    ]);
+    );
+
+    const results = await prisma.$transaction(operations);
+    const mutasi = results[mutasiIndex];
 
     return mutasi;
 };
@@ -251,6 +284,4 @@ export const getAllMutasiKeluar = async ({ startDate, endDate, page = 1, limit =
             totalPages: Math.ceil(total / limitNum),
         },
     };
-
-    return result;
 };

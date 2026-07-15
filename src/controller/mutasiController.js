@@ -60,14 +60,17 @@ export const seeMutasiMasukByBarang = async (req, res) => {
 // barang keluar
 export const addBarangKeluar = async (req, res) => {
     try {
-        const { barangId, jumlah, keterangan } = req.body;
+        const { barangId, jumlah, keterangan, ambilDariLembaran, panjangCustom, lebarCustom } = req.body;
         const userId = req.user?.id;
 
         if (!userId) {
             return res.status(401).json({ message: 'Unauthorized' });
         }
 
-        const result = await barangKeluar({ barangId, jumlah, keterangan }, userId);
+        const result = await barangKeluar(
+            { barangId, jumlah, keterangan, ambilDariLembaran, panjangCustom, lebarCustom },
+            userId,
+        );
 
         return res.status(201).json({
             message: 'Barang Masuk Berhasil Dicatat',

@@ -1,9 +1,24 @@
-import { addBarang, deleteBarang, getAllBarang, getBarangAktif, updateBarang } from '../service/barangService.js';
+import {
+    addBarang,
+    deleteBarang,
+    getAllBarang,
+    getBarangAktif,
+    getBarangPotongan,
+    updateBarang,
+} from '../service/barangService.js';
 
 export const createBarang = async (req, res) => {
     try {
-        const { kategoriId, namaBarang, kodeBarang, jumlahBarang, ukuran } = req.body;
-        const result = await addBarang({ kategoriId, namaBarang, kodeBarang, jumlahBarang, ukuran });
+        const { kategoriId, namaBarang, kodeBarang, jumlahBarang, ukuran, harga, jenisPenjualan } = req.body;
+        const result = await addBarang({
+            kategoriId,
+            namaBarang,
+            kodeBarang,
+            jumlahBarang,
+            ukuran,
+            harga,
+            jenisPenjualan,
+        });
         res.status(200).json({
             message: 'Berhasil Tambah Data Barang',
             data: result,
@@ -66,6 +81,20 @@ export const removeBarang = async (req, res) => {
         await deleteBarang(id, { namaBarang });
         res.status(200).json({
             message: 'Berhasil Hapus Data',
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+        });
+    }
+};
+
+export const seeAllBarangPotongan = async (req, res) => {
+    try {
+        const result = await getBarangPotongan();
+        res.status(200).json({
+            message: 'Berhasil Ambil Data Barang Potongan',
+            data: result,
         });
     } catch (error) {
         res.status(500).json({
