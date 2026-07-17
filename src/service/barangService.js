@@ -25,25 +25,30 @@ export const addBarang = async ({
         throw new Error('Harga Wajib Diisi');
     }
 
-    // const existingBarang = await prisma.barang.findFirst({
-    //     where: {
-    //         kategoriId,
-    //         namaBarang,
-    //     },
-    // });
+    // konversi ke float
+    const hargaFloat = parseFloat(harga);
+    if (isNaN(hargaFloat)) {
+        throw new Error('Harga harus berupa angka');
+    }
 
-    // if (existingBarang) {
-    //     throw new Error('Nama Barang Sudah Ada');
-    // }
+    if (jumlahBarang === undefined || jumlahBarang === null || jumlahBarang === '') {
+        throw new Error('Jumlah barang wajib di isi');
+    }
+
+    // konversi ke iny
+    const jumlahBarangInt = parseInt(jumlahBarang);
+    if (isNaN(jumlahBarangInt)) {
+        throw new Error('Jumlah barang wajib angka');
+    }
 
     const newBarang = await prisma.barang.create({
         data: {
             kategoriId,
             namaBarang: namaBarang,
             kodeBarang: kodeBarang,
-            jumlahBarang: jumlahBarang,
+            jumlahBarang: jumlahBarangInt,
             ukuran: ukuran,
-            harga: harga,
+            harga: hargaFloat,
             ...(jenisPenjualan && { jenisPenjualan }),
             ...(status && { status }),
         },
