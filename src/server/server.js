@@ -10,6 +10,7 @@ import kategoriRoutes from '../routes/kategoriRoutes.js';
 import barangRoutes from '../routes/barangRoutes.js';
 import mutasiRoutes from '../routes/mutasiRoutes.js';
 import produkAds from '../routes/produkAdsRoutes.js';
+import laporanRoutes from '../routes/laporanRoutes.js';
 
 const app = express();
 const port = 3000;
@@ -32,6 +33,7 @@ app.use('/kategori', kategoriRoutes);
 app.use('/barang', barangRoutes);
 app.use('/mutasi', mutasiRoutes);
 app.use('/produk-ads', produkAds);
+app.use('/laporan', laporanRoutes);
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
