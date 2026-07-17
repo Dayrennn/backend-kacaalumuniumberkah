@@ -2,9 +2,13 @@ import prisma from '../config/prisma.js';
 import { hitungTotalHarga } from '../utils/hitungTotalHarga.js';
 
 // barang masuk
-export const barangMasuk = async ({ barangId, jumlah, keterangan }, userId) => {
+export const barangMasuk = async ({ barangId, jumlah, keterangan, suplier }, userId) => {
     if (!barangId) {
         throw new Error('Barang Id Tidak Ditemukan');
+    }
+
+    if (!suplier) {
+        throw new Error('Supplier wajib di isi');
     }
 
     if (!jumlah || jumlah <= 0) {
@@ -44,6 +48,7 @@ export const barangMasuk = async ({ barangId, jumlah, keterangan }, userId) => {
                 stokSebelum,
                 stokSesudah,
                 keterangan,
+                suplier,
             },
             include: {
                 barang: true,
@@ -139,11 +144,15 @@ export const getMutasiMasukByBarang = async (barangId) => {
 
 // barang keluar
 export const barangKeluar = async (
-    { barangId, jumlah, keterangan, ambilDariLembaran, panjangCustom, lebarCustom },
+    { barangId, jumlah, keterangan, ambilDariLembaran, panjangCustom, lebarCustom, customer },
     userId,
 ) => {
     if (!barangId) {
         throw new Error('Barang Id Tidak Ditemukan');
+    }
+
+    if (!customer) {
+        throw new Error('customer wajib di isi');
     }
 
     if (!jumlah || jumlah <= 0) {
@@ -210,6 +219,7 @@ export const barangKeluar = async (
                 panjangCustom: barang.jenisPenjualan === 'Potongan' ? panjangCustom : null,
                 lebarCustom: barang.jenisPenjualan === 'Potongan' ? lebarCustom : null,
                 totalHarga,
+                customer,
             },
             include: {
                 barang: true,

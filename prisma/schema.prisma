@@ -48,7 +48,7 @@ model Barang {
   jumlahBarang Int
   status Status @default(Aktif)
   ukuran String
-  harga Float
+  harga Int
   jenisPenjualan jenisPenjualan @default(PCS)
 
   kategori Kategori @relation(fields: [kategoriId], references: [id])
@@ -65,6 +65,8 @@ model MutasiStok {
   id          String     @id @default(uuid())
   barangId    String
   userId      String
+  customer String?
+  suplier String?
   tipe        TipeMutasi
   jumlah      Int
   stokSebelum Int

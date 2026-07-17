@@ -9,14 +9,14 @@ import {
 // barang masuk
 export const addBarangMasuk = async (req, res) => {
     try {
-        const { barangId, jumlah, keterangan } = req.body;
+        const { barangId, jumlah, keterangan, suplier } = req.body;
         const userId = req.user?.id;
 
         if (!userId) {
             return res.status(401).json({ message: 'Unauthorized' });
         }
 
-        const result = await barangMasuk({ barangId, jumlah, keterangan }, userId);
+        const result = await barangMasuk({ barangId, jumlah, keterangan, suplier }, userId);
 
         return res.status(201).json({
             message: 'Barang Masuk Berhasil Dicatat',
@@ -60,7 +60,7 @@ export const seeMutasiMasukByBarang = async (req, res) => {
 // barang keluar
 export const addBarangKeluar = async (req, res) => {
     try {
-        const { barangId, jumlah, keterangan, ambilDariLembaran, panjangCustom, lebarCustom } = req.body;
+        const { barangId, jumlah, keterangan, ambilDariLembaran, panjangCustom, lebarCustom, customer } = req.body;
         const userId = req.user?.id;
 
         if (!userId) {
@@ -68,10 +68,10 @@ export const addBarangKeluar = async (req, res) => {
         }
 
         const result = await barangKeluar(
-            { barangId, jumlah, keterangan, ambilDariLembaran, panjangCustom, lebarCustom },
+            { barangId, jumlah, keterangan, ambilDariLembaran, panjangCustom, lebarCustom, customer },
             userId,
         );
-
+    
         return res.status(201).json({
             message: 'Barang Masuk Berhasil Dicatat',
             data: result,

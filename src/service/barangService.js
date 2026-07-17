@@ -26,8 +26,8 @@ export const addBarang = async ({
     }
 
     // konversi ke float
-    const hargaFloat = parseFloat(harga);
-    if (isNaN(hargaFloat)) {
+    const hargaInt = parseInt(harga);
+    if (isNaN(hargaInt)) {
         throw new Error('Harga harus berupa angka');
     }
 
@@ -48,7 +48,7 @@ export const addBarang = async ({
             kodeBarang: kodeBarang,
             jumlahBarang: jumlahBarangInt,
             ukuran: ukuran,
-            harga: hargaFloat,
+            harga: hargaInt,
             ...(jenisPenjualan && { jenisPenjualan }),
             ...(status && { status }),
         },
