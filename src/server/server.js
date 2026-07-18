@@ -11,6 +11,7 @@ import barangRoutes from '../routes/barangRoutes.js';
 import mutasiRoutes from '../routes/mutasiRoutes.js';
 import produkAds from '../routes/produkAdsRoutes.js';
 import laporanRoutes from '../routes/laporanRoutes.js';
+import companyRoutes from '../routes/companyRoutes.js';
 
 const app = express();
 const port = 3000;
@@ -34,6 +35,7 @@ app.use('/barang', barangRoutes);
 app.use('/mutasi', mutasiRoutes);
 app.use('/produk-ads', produkAds);
 app.use('/laporan', laporanRoutes);
+app.use('/company', companyRoutes);
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
