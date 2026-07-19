@@ -92,3 +92,12 @@ model ProdukAds {
 
   barang Barang @relation(fields: [barangId], references: [id])
 }
+model CompanyProfile {
+    id String @id @default("company-profile")
+    namaPerusahaan String
+    telephone String
+    deskripsiPerusahaan String
+    lokasi String
+    jadwal String
+    email String
+}
