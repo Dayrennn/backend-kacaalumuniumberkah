@@ -60,7 +60,8 @@ export const addCompany = async ({ namaPerusahaan, telephone, deskripsiPerusahaa
 };
 
 export const getCompanyProfile = async () => {
-    const result = await prisma.companyProfile.findMany({
+    const result = await prisma.companyProfile.findFirst({
+        where: { id: 'company-profile' },
         select: {
             namaPerusahaan: true,
             telephone: true,
@@ -72,4 +73,52 @@ export const getCompanyProfile = async () => {
     });
 
     return result;
+};
+
+export const addBanner = async ({ bannerImageUrl, judul }) => {
+    if (!bannerImageUrl) {
+        throw new Error('Gambar wajib di isi');
+    }
+    if (!judul) {
+        throw new Error('Judul wajib di isi');
+    }
+
+    // ambil dulu data lama (kalau ada) sebelum di-overwrite, buat tau gambar mana yang harus dihapus
+    const existing = await prisma.banner.findUnique({
+        where: { id: 'banner-profile' },
+        select: { bannerImageUrl: true },
+    });
+
+    const newBanner = await prisma.banner.upsert({
+        where: {
+            id: 'banner-profile',
+        },
+        update: {
+            bannerImageUrl,
+            judul,
+        },
+        create: {
+            id: 'banner-profile',
+            bannerImageUrl,
+            judul,
+        },
+    });
+
+    return {
+        ...newBanner,
+        // hanya kasih tau ada gambar lama yang perlu dihapus kalau memang sebelumnya sudah ada data & gambarnya
+        oldImageUrl: existing?.bannerImageUrl ?? null,
+    };
+};
+
+export const getBanner = async () => {
+    const bannerProfile = await prisma.banner.findFirst({
+        where: { id: 'banner-profile' },
+        select: {
+            bannerImageUrl: true,
+            judul: true,
+        },
+    });
+
+    return bannerProfile;
 };

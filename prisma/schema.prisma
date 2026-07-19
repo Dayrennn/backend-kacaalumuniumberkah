@@ -101,3 +101,9 @@ model CompanyProfile {
     jadwal String
     email String
 }
+
+model Banner {
+  id String @id @default("banner-profile")
+  bannerImageUrl String
+  judul String
+}
