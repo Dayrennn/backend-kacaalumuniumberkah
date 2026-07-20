@@ -93,7 +93,7 @@ model ProdukAds {
   barang Barang @relation(fields: [barangId], references: [id])
 }
 model CompanyProfile {
-    id String @id @default("company-profile")
+    id String @id 
     namaPerusahaan String
     telephone String
     deskripsiPerusahaan String
@@ -103,7 +103,7 @@ model CompanyProfile {
 }
 
 model Banner {
-  id String @id @default("banner-profile")
+  id String @id
   bannerImageUrl String
   judul String
 }
