@@ -1,4 +1,6 @@
 import prisma from '../config/prisma.js';
+import compressToWebp from '../utils/compressWebp.js';
+import { deleteFromCloudinary, uploadToCloudinary } from './cloudinaryService.js';
 
 export const getAdsLandingPage = async () => {
     const ads = await prisma.produkAds.findMany({
@@ -75,8 +77,8 @@ export const getCompanyProfile = async () => {
     return result;
 };
 
-export const addBanner = async ({ bannerImageUrl, judul }) => {
-    if (!bannerImageUrl) {
+export const addBanner = async ({ imageBuffer, judul }) => {
+    if (!imageBuffer) {
         throw new Error('Gambar wajib di isi');
     }
     if (!judul) {
@@ -86,29 +88,43 @@ export const addBanner = async ({ bannerImageUrl, judul }) => {
     // ambil dulu data lama (kalau ada) sebelum di-overwrite, buat tau gambar mana yang harus dihapus
     const existing = await prisma.banner.findUnique({
         where: { id: 'banner-profile' },
-        select: { bannerImageUrl: true },
+        select: { bannerImagePublicId: true },
     });
 
-    const newBanner = await prisma.banner.upsert({
-        where: {
-            id: 'banner-profile',
-        },
-        update: {
-            bannerImageUrl,
-            judul,
-        },
-        create: {
-            id: 'banner-profile',
-            bannerImageUrl,
-            judul,
-        },
+    // 1. upload gambar baru DULU
+    const compressed = await compressToWebp(imageBuffer);
+    const uploaded = await uploadToCloudinary(compressed, {
+        folder: 'banner',
+        publicId: `banner-${Date.now()}`,
     });
 
-    return {
-        ...newBanner,
-        // hanya kasih tau ada gambar lama yang perlu dihapus kalau memang sebelumnya sudah ada data & gambarnya
-        oldImageUrl: existing?.bannerImageUrl ?? null,
-    };
+    try {
+        const newBanner = await prisma.banner.upsert({
+            where: { id: 'banner-profile' },
+            update: {
+                bannerImageUrl: uploaded.url,
+                bannerImagePublicId: uploaded.publicId,
+                judul,
+            },
+            create: {
+                id: 'banner-profile',
+                bannerImageUrl: uploaded.url,
+                bannerImagePublicId: uploaded.publicId,
+                judul,
+            },
+        });
+
+        // 2. setelah DB berhasil, BARU hapus gambar lama
+        if (existing?.bannerImagePublicId) {
+            await deleteFromCloudinary(existing.bannerImagePublicId);
+        }
+
+        return newBanner;
+    } catch (error) {
+        // kalau upsert DB gagal, hapus gambar baru yang terlanjur ke-upload (rollback)
+        await deleteFromCloudinary(uploaded.publicId);
+        throw error;
+    }
 };
 
 export const getBanner = async () => {
