@@ -10,15 +10,16 @@ datasource db {
 model User {
     id String @id @default(uuid())
     username String @unique
-    role Role
+    role Role @default(Admin)
     password String
+    isDeleted Boolean @default(false)
+    deletedAt DateTime?
 
     mutasi MutasiStok[]
 }
 
 enum Role {
-    Admin_1
-    Admin_2
+    Admin
     Owner
 }
 
