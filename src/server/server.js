@@ -12,6 +12,7 @@ import mutasiRoutes from '../routes/mutasiRoutes.js';
 import produkAds from '../routes/produkAdsRoutes.js';
 import laporanRoutes from '../routes/laporanRoutes.js';
 import companyRoutes from '../routes/companyRoutes.js';
+import dashboardRoutes from '../routes/dashboardRoutes.js';
 
 const app = express();
 const port = 3000;
@@ -36,6 +37,7 @@ app.use('/mutasi', mutasiRoutes);
 app.use('/produk-ads', produkAds);
 app.use('/laporan', laporanRoutes);
 app.use('/company', companyRoutes);
+app.use('/dashboard', dashboardRoutes);
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
