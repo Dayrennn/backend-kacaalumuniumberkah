@@ -98,6 +98,7 @@ model CompanyProfile {
     id String @id 
     namaPerusahaan String
     telephone String
+    secondTelephone String?
     deskripsiPerusahaan String
     lokasi String
     jadwal String

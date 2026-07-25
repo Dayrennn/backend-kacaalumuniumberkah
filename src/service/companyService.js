@@ -15,7 +15,15 @@ export const getAdsLandingPage = async () => {
     return ads;
 };
 
-export const addCompany = async ({ namaPerusahaan, telephone, deskripsiPerusahaan, lokasi, jadwal, email }) => {
+export const addCompany = async ({
+    namaPerusahaan,
+    telephone,
+    secondTelephone,
+    deskripsiPerusahaan,
+    lokasi,
+    jadwal,
+    email,
+}) => {
     if (!namaPerusahaan) {
         throw new Error('Nama Perusahaan Wajib di Isi');
     }
@@ -42,6 +50,7 @@ export const addCompany = async ({ namaPerusahaan, telephone, deskripsiPerusahaa
         update: {
             namaPerusahaan,
             telephone,
+            secondTelephone,
             deskripsiPerusahaan,
             lokasi,
             jadwal,
@@ -51,6 +60,7 @@ export const addCompany = async ({ namaPerusahaan, telephone, deskripsiPerusahaa
             id: 'company-profile',
             namaPerusahaan,
             telephone,
+            secondTelephone,
             deskripsiPerusahaan,
             lokasi,
             jadwal,
@@ -67,6 +77,7 @@ export const getCompanyProfile = async () => {
         select: {
             namaPerusahaan: true,
             telephone: true,
+            secondTelephone: true,
             deskripsiPerusahaan: true,
             lokasi: true,
             jadwal: true,

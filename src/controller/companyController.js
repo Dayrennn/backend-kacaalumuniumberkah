@@ -19,8 +19,16 @@ export const seeAllAds = async (req, res) => {
 
 export const createCompany = async (req, res) => {
     try {
-        const { namaPerusahaan, telephone, deskripsiPerusahaan, lokasi, jadwal, email } = req.body;
-        const data = await addCompany({ namaPerusahaan, telephone, deskripsiPerusahaan, lokasi, jadwal, email });
+        const { namaPerusahaan, telephone, secondTelephone, deskripsiPerusahaan, lokasi, jadwal, email } = req.body;
+        const data = await addCompany({
+            namaPerusahaan,
+            telephone,
+            secondTelephone,
+            deskripsiPerusahaan,
+            lokasi,
+            jadwal,
+            email,
+        });
         res.status(200).json({
             message: 'Berhasil Tambah Data Perusahaan',
             data,
