@@ -99,7 +99,10 @@ export const getAllBarang = async () => {
     };
 };
 
-export const updateBarang = async (id, { kategoriId, namaBarang, status, ukuran, kodeBarang }) => {
+export const updateBarang = async (
+    id,
+    { kategoriId, namaBarang, status, ukuran, kodeBarang, harga, jenisPenjualan },
+) => {
     const existingBarang = await prisma.barang.findUnique({
         where: { id },
     });
@@ -116,6 +119,10 @@ export const updateBarang = async (id, { kategoriId, namaBarang, status, ukuran,
     //         throw new Error('Nama Barang Sudah Digunakan');
     //     }
     // }
+    const hargaInt = parseInt(harga);
+    if (isNaN(hargaInt)) {
+        throw new Error('Harga harus berupa angka');
+    }
 
     const data = {};
     if (namaBarang) {
@@ -132,6 +139,12 @@ export const updateBarang = async (id, { kategoriId, namaBarang, status, ukuran,
     }
     if (kodeBarang !== undefined) {
         data.kodeBarang = kodeBarang;
+    }
+    if (harga) {
+        data.harga = hargaInt;
+    }
+    if (jenisPenjualan) {
+        data.jenisPenjualan = jenisPenjualan;
     }
 
     const update = await prisma.barang.update({

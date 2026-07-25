@@ -61,8 +61,16 @@ export const seeAllBarang = async (req, res) => {
 export const modifyBarang = async (req, res) => {
     try {
         const { id } = req.params;
-        const { kategoriId, namaBarang, status, ukuran, kodeBarang } = req.body;
-        const result = await updateBarang(id, { kategoriId, namaBarang, status, ukuran, kodeBarang });
+        const { kategoriId, namaBarang, status, ukuran, kodeBarang, harga, jenisPenjualan } = req.body;
+        const result = await updateBarang(id, {
+            kategoriId,
+            namaBarang,
+            status,
+            ukuran,
+            kodeBarang,
+            harga,
+            jenisPenjualan,
+        });
         res.status(200).json({
             message: 'Berhasil Update Barang',
             data: result,
