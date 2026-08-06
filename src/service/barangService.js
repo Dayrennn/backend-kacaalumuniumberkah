@@ -70,31 +70,44 @@ export const getBarangAktif = async () => {
     return barangAktif;
 };
 
-export const getAllBarang = async () => {
+export const getAllBarang = async (page = 1, limit = 10, search = '') => {
+    const skip = (page - 1) * limit;
+
+    const where = search?.trim()
+        ? {
+              namaBarang: {
+                  contains: search.trim(),
+                  mode: 'insensitive',
+              },
+          }
+        : {};
+
     const [barang, totalBarang, barangAktif, barangNonaktif] = await prisma.$transaction([
         prisma.barang.findMany({
+            where,
+            skip,
+            take: limit,
             include: {
                 kategori: true,
             },
         }),
-        prisma.barang.count(),
+        prisma.barang.count({ where }),
         prisma.barang.count({
-            where: {
-                status: 'Aktif',
-            },
+            where: { ...where, status: 'Aktif' },
         }),
         prisma.barang.count({
-            where: {
-                status: 'Nonaktif',
-            },
+            where: { ...where, status: 'Nonaktif' },
         }),
     ]);
     return {
         barang,
         summary: {
-            totalBarang,
+            page,
+            limit,
+            total: totalBarang,
             barangAktif,
             barangNonaktif,
+            totalPages: Math.ceil(totalBarang / limit),
         },
     };
 };

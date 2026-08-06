@@ -46,7 +46,11 @@ export const seeBarangAktif = async (req, res) => {
 
 export const seeAllBarang = async (req, res) => {
     try {
-        const result = await getAllBarang();
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const { search = '' } = req.query;
+
+        const result = await getAllBarang(page, limit, search);
         res.status(200).json({
             message: 'Berhasil Ambil Data Barang',
             data: result,

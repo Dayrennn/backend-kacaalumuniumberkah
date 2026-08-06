@@ -1,3 +1,5 @@
+import ExcelJS from 'exceljs';
+
 export const buildDateFilter = (startDate, endDate) => {
     const where = {};
     if (startDate || endDate) {
@@ -44,207 +46,289 @@ export const formatRupiah = (angka) => {
 };
 
 // ==== Warna tema ====
-const COLOR_PRIMARY = '#1e3a5f';
-const COLOR_HEADER_BG = '#1e3a5f';
-const COLOR_HEADER_TEXT = '#ffffff';
-const COLOR_ROW_EVEN = '#f5f7fa';
-const COLOR_ROW_ODD = '#ffffff';
-const COLOR_BORDER = '#d0d5dd';
-const COLOR_TEXT = '#1a1a1a';
-const COLOR_MUTED = '#667085';
+const COLOR_PRIMARY = 'FF1E3A5F';
+const COLOR_HEADER_TEXT = 'FFFFFFFF';
+const COLOR_ROW_EVEN = 'FFF5F7FA';
+const COLOR_BORDER = 'FFD0D5DD';
+const COLOR_SUMMARY_BG = 'FFF0F4F8';
+const COLOR_SUMMARY_LABEL = 'FF667085';
 
-const ROW_HEIGHT = 22;
-const HEADER_ROW_HEIGHT = 24;
-
-const getTableWidth = (columns) => columns.reduce((sum, col) => sum + col.width, 0);
-
-export const drawTableHeader = (doc, columns, y) => {
-    const tableWidth = getTableWidth(columns);
-    const left = doc.page.margins.left;
-
-    // Background header
-    doc.rect(left, y, tableWidth, HEADER_ROW_HEIGHT).fill(COLOR_HEADER_BG);
-
-    doc.font('Helvetica-Bold').fontSize(8.5).fillColor(COLOR_HEADER_TEXT);
-    let x = left;
-    columns.forEach((col) => {
-        doc.text(col.label, x + 5, y + 7, { width: col.width - 10, align: col.align || 'left' });
-        x += col.width;
-    });
-
-    doc.fillColor(COLOR_TEXT); // reset warna
-    return y + HEADER_ROW_HEIGHT;
+const thinBorder = {
+    top: { style: 'thin', color: { argb: COLOR_BORDER } },
+    left: { style: 'thin', color: { argb: COLOR_BORDER } },
+    bottom: { style: 'thin', color: { argb: COLOR_BORDER } },
+    right: { style: 'thin', color: { argb: COLOR_BORDER } },
 };
 
-export const drawTableRow = (doc, columns, row, y, index) => {
-    const tableWidth = getTableWidth(columns);
-    const left = doc.page.margins.left;
-
-    // Zebra background
-    const bg = index % 2 === 0 ? COLOR_ROW_ODD : COLOR_ROW_EVEN;
-    doc.rect(left, y, tableWidth, ROW_HEIGHT).fill(bg);
-
-    // Border bawah baris (garis tipis)
-    doc.strokeColor(COLOR_BORDER)
-        .lineWidth(0.5)
-        .moveTo(left, y + ROW_HEIGHT)
-        .lineTo(left + tableWidth, y + ROW_HEIGHT)
-        .stroke();
-
-    doc.font('Helvetica').fontSize(8).fillColor(COLOR_TEXT);
-    let x = left;
-    columns.forEach((col) => {
-        doc.text(String(row[col.key] ?? '-'), x + 5, y + 6, {
-            width: col.width - 10,
-            align: col.align || 'left',
-            ellipsis: true,
-        });
-        x += col.width;
-    });
-
-    return y + ROW_HEIGHT;
-};
-
-export const drawTableBorder = (doc, columns, startY, endY) => {
-    const tableWidth = getTableWidth(columns);
-    const left = doc.page.margins.left;
-
-    doc.strokeColor(COLOR_BORDER).lineWidth(0.7);
-
-    // Border luar
-    doc.rect(left, startY, tableWidth, endY - startY).stroke();
-
-    // Garis vertikal antar kolom
-    let x = left;
-    columns.forEach((col, i) => {
-        if (i > 0) {
-            doc.moveTo(x, startY).lineTo(x, endY).stroke();
-        }
-        x += col.width;
-    });
-};
-
-export const drawFooter = (doc) => {
-    const pageRange = doc.bufferedPageRange();
-    for (let i = 0; i < pageRange.count; i++) {
-        doc.switchToPage(i);
-
-        const bottom = doc.page.height - doc.page.margins.bottom + 15;
-        const left = doc.page.margins.left;
-        const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-
-        doc.strokeColor(COLOR_BORDER)
-            .lineWidth(0.5)
-            .moveTo(left, bottom - 8)
-            .lineTo(left + width, bottom - 8)
-            .stroke();
-
-        doc.font('Helvetica').fontSize(7.5).fillColor(COLOR_MUTED);
-    }
-};
-
-export const renderLaporan = ({ res, title, subtitle, startDate, endDate, columns, data, filename, summary }) => {
-    const doc = new PDFDocument({ size: 'A4', margin: 40, layout: 'landscape', bufferPages: true });
-
-    res.setHeader('Content-Type', 'application/pdf');
+const sendWorkbook = async (res, workbook, filename) => {
+    res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    doc.pipe(res);
+    await workbook.xlsx.write(res);
+    res.end();
+};
 
-    const left = doc.page.margins.left;
-    const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+/**
+ * Renderer generik untuk laporan berbentuk tabel transaksi datar
+ * (dipakai oleh Laporan Masuk & Laporan Keluar).
+ */
+export const renderLaporanExcel = async ({
+    res,
+    title,
+    subtitle,
+    startDate,
+    endDate,
+    columns,
+    data,
+    filename,
+    summary,
+}) => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Laporan', { views: [{ showGridLines: false }] });
 
-    // ===== Header Laporan (box) =====
-    doc.rect(left, doc.y, width, subtitle ? 62 : 48).fill(COLOR_PRIMARY);
+    const colCount = columns.length;
+    columns.forEach((col, i) => {
+        sheet.getColumn(i + 1).width = col.excelWidth ?? Math.max(10, Math.round(col.width / 6));
+    });
 
-    const headerTop = doc.y;
-    doc.fillColor('#ffffff')
-        .font('Helvetica-Bold')
-        .fontSize(16)
-        .text(title, left + 15, headerTop + 10, {
-            width: width - 30,
-        });
+    let row = 1;
+
+    sheet.mergeCells(row, 1, row, colCount);
+    const titleCell = sheet.getCell(row, 1);
+    titleCell.value = title;
+    titleCell.font = { name: 'Calibri', size: 14, bold: true, color: { argb: COLOR_HEADER_TEXT } };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_PRIMARY } };
+    sheet.getRow(row).height = 26;
+    row++;
 
     if (subtitle) {
-        doc.font('Helvetica-Bold')
-            .fontSize(11)
-            .text(subtitle, left + 15, headerTop + 32, {
-                width: width - 30,
-            });
+        sheet.mergeCells(row, 1, row, colCount);
+        const subtitleCell = sheet.getCell(row, 1);
+        subtitleCell.value = subtitle;
+        subtitleCell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: COLOR_HEADER_TEXT } };
+        subtitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        subtitleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_PRIMARY } };
+        row++;
     }
 
-    doc.font('Helvetica')
-        .fontSize(9)
-        .fillColor('#dbe4ee')
-        .text(
-            `Periode: ${startDate ? formatTanggal(startDate) : 'Semua'}  —  ${endDate ? formatTanggal(endDate) : 'Semua'}`,
-            left + 15,
-            headerTop + (subtitle ? 46 : 32),
-            { width: width - 30 },
-        );
+    sheet.mergeCells(row, 1, row, colCount);
+    const periodeCell = sheet.getCell(row, 1);
+    periodeCell.value = `Periode: ${startDate ? formatTanggal(startDate) : 'Semua'}  -  ${endDate ? formatTanggal(endDate) : 'Semua'}`;
+    periodeCell.font = { name: 'Calibri', size: 9, italic: true, color: { argb: COLOR_HEADER_TEXT } };
+    periodeCell.alignment = { horizontal: 'center' };
+    periodeCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_PRIMARY } };
+    row += 2;
 
-    doc.fillColor(COLOR_TEXT);
-    doc.y = headerTop + (subtitle ? 62 : 48) + 15;
-
-    // ===== Ringkasan (kalau ada) =====
     if (summary && summary.length > 0) {
-        const boxHeight = 40;
-        const boxWidth = (width - (summary.length - 1) * 10) / summary.length;
-        let sx = left;
-        const sy = doc.y;
+        const labelRow = row;
+        const valueRow = row + 1;
+        const spanPerItem = Math.max(1, Math.floor(colCount / summary.length));
 
-        summary.forEach((item) => {
-            doc.rect(sx, sy, boxWidth, boxHeight).fillAndStroke('#f0f4f8', COLOR_BORDER);
-            doc.font('Helvetica')
-                .fontSize(7.5)
-                .fillColor(COLOR_MUTED)
-                .text(item.label, sx + 10, sy + 8, {
-                    width: boxWidth - 20,
-                });
-            doc.font('Helvetica-Bold')
-                .fontSize(11)
-                .fillColor(COLOR_PRIMARY)
-                .text(item.value, sx + 10, sy + 20, {
-                    width: boxWidth - 20,
-                });
-            sx += boxWidth + 10;
+        summary.forEach((item, i) => {
+            const startCol = i * spanPerItem + 1;
+            const endCol = i === summary.length - 1 ? colCount : startCol + spanPerItem - 1;
+
+            sheet.mergeCells(labelRow, startCol, labelRow, endCol);
+            const labelCell = sheet.getCell(labelRow, startCol);
+            labelCell.value = item.label;
+            labelCell.font = { name: 'Calibri', size: 8, color: { argb: COLOR_SUMMARY_LABEL } };
+            labelCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_SUMMARY_BG } };
+            labelCell.alignment = { horizontal: 'center' };
+
+            sheet.mergeCells(valueRow, startCol, valueRow, endCol);
+            const valueCell = sheet.getCell(valueRow, startCol);
+            valueCell.value = item.value;
+            valueCell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: COLOR_PRIMARY } };
+            valueCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_SUMMARY_BG } };
+            valueCell.alignment = { horizontal: 'center' };
         });
 
-        doc.fillColor(COLOR_TEXT);
-        doc.y = sy + boxHeight + 15;
+        row = valueRow + 2;
     }
 
-    // ===== Tabel =====
-    const tableStartX = doc.page.margins.left;
-    let y = drawTableHeader(doc, columns, doc.y);
-    const tableTopY = doc.y - HEADER_ROW_HEIGHT;
-    const bottomLimit = doc.page.height - doc.page.margins.bottom - 25;
+    const headerRow = row;
+    columns.forEach((col, i) => {
+        const cell = sheet.getCell(headerRow, i + 1);
+        cell.value = col.label;
+        cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: COLOR_HEADER_TEXT } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_PRIMARY } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = thinBorder;
+    });
+    sheet.getRow(headerRow).height = 20;
+    row++;
 
-    let rowStartY = y;
-    let rowIndex = 0;
-
-    data.forEach((row) => {
-        if (y + ROW_HEIGHT > bottomLimit) {
-            drawTableBorder(doc, columns, rowStartY - HEADER_ROW_HEIGHT, y);
-            doc.addPage();
-            y = drawTableHeader(doc, columns, doc.page.margins.top);
-            rowStartY = y;
-            rowIndex = 0;
-        }
-        y = drawTableRow(doc, columns, row, y, rowIndex);
-        rowIndex++;
+    data.forEach((rowData, idx) => {
+        columns.forEach((col, i) => {
+            const cell = sheet.getCell(row, i + 1);
+            cell.value = rowData[col.key] ?? '-';
+            cell.font = { name: 'Calibri', size: 10 };
+            cell.alignment = { horizontal: col.align || 'left', vertical: 'middle' };
+            cell.border = thinBorder;
+            if (idx % 2 === 1) {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_ROW_EVEN } };
+            }
+        });
+        row++;
     });
 
     if (data.length === 0) {
-        doc.font('Helvetica-Oblique')
-            .fontSize(10)
-            .fillColor(COLOR_MUTED)
-            .text('Tidak ada data pada periode ini.', tableStartX + 10, y + 10);
-        y += 30;
+        sheet.mergeCells(row, 1, row, colCount);
+        const emptyCell = sheet.getCell(row, 1);
+        emptyCell.value = 'Tidak ada data pada periode ini.';
+        emptyCell.font = { name: 'Calibri', size: 10, italic: true, color: { argb: COLOR_SUMMARY_LABEL } };
+        emptyCell.alignment = { horizontal: 'center' };
     }
 
-    drawTableBorder(doc, columns, rowStartY - HEADER_ROW_HEIGHT, y);
+    await sendWorkbook(res, workbook, filename);
+};
 
-    drawFooter(doc);
+/**
+ * Renderer khusus Laporan Stok Gabungan, mengikuti persis format
+ * template "STOK KACA LEGOK" (NO, Nama Barang, UK Barang, Stok Awal,
+ * Masuk, Keluar, Stock Akhir, Harga/L, Total) dengan grup per nama barang
+ * dan formula (bukan angka statis).
+ */
+export const renderLaporanStokGabunganExcel = async ({ res, judul, startDate, endDate, groups, filename }) => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Stok Gabungan', { views: [{ showGridLines: false }] });
 
-    doc.end();
+    const COLOR_HEADER_BG = 'FFDCE6F1';
+    const COLOR_GRID = 'FF000000';
+    const gridBorder = {
+        top: { style: 'thin', color: { argb: COLOR_GRID } },
+        left: { style: 'thin', color: { argb: COLOR_GRID } },
+        bottom: { style: 'thin', color: { argb: COLOR_GRID } },
+        right: { style: 'thin', color: { argb: COLOR_GRID } },
+    };
+
+    const columns = [
+        { key: 'no', label: 'NO', width: 6, align: 'center' },
+        { key: 'namaBarang', label: 'Nama Barang', width: 18, align: 'left' },
+        { key: 'ukuran', label: 'UK Barang', width: 13, align: 'center' },
+        { key: 'stokAwal', label: 'Stok Awal', width: 11, align: 'center' },
+        { key: 'masuk', label: 'Masuk', width: 10, align: 'center' },
+        { key: 'keluar', label: 'Keluar', width: 10, align: 'center' },
+        { key: 'stokAkhir', label: 'Stock akhir', width: 11, align: 'center' },
+        { key: 'harga', label: 'Harga/L', width: 12, align: 'right' },
+        { key: 'total', label: 'Total', width: 14, align: 'right' },
+    ];
+    columns.forEach((c, i) => { sheet.getColumn(i + 1).width = c.width; });
+
+    const periodeText = startDate
+        ? `${formatTanggal(startDate)}${endDate && endDate !== startDate ? ` s/d ${formatTanggal(endDate)}` : ''}`
+        : 'SEMUA PERIODE';
+    const judulLaporan = judul ?? 'LAPORAN STOK BARANG';
+
+    // ===== Judul (2 baris, seperti template) =====
+    sheet.mergeCells(1, 1, 2, columns.length);
+    const titleCell = sheet.getCell(1, 1);
+    titleCell.value = `${judulLaporan.toUpperCase()} ${periodeText}`;
+    titleCell.font = { name: 'Calibri', size: 14, bold: true };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    // ===== Ringkasan (STOK AWAL / MASUK / AKHIR) — nilainya formula, diisi belakangan =====
+    sheet.getCell(3, 1).value = 'STOK BARANG AWAL';
+    sheet.getCell(3, 1).font = { name: 'Calibri', size: 11, bold: true };
+    sheet.getCell(4, 1).value = 'BARANG MASUK';
+    sheet.getCell(4, 1).font = { name: 'Calibri', size: 11, bold: true };
+    sheet.getCell(5, 1).value = 'STOK BARANG AKHIR';
+    sheet.getCell(5, 1).font = { name: 'Calibri', size: 11, bold: true };
+
+    // ===== Header tabel (baris 6) =====
+    const headerRowIdx = 6;
+    columns.forEach((col, i) => {
+        const cell = sheet.getCell(headerRowIdx, i + 1);
+        cell.value = col.label;
+        cell.font = { name: 'Calibri', size: 9.5, bold: true };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_HEADER_BG } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = gridBorder;
+    });
+
+    // ===== Baris data, dikelompokkan per Nama Barang (mengikuti pola template) =====
+    let r = headerRowIdx + 2; // baris 7 kosong seperti template asli, data mulai baris 8
+    const firstDataRow = r;
+
+    if (groups.length === 0) {
+        sheet.mergeCells(r, 1, r, columns.length);
+        const emptyCell = sheet.getCell(r, 1);
+        emptyCell.value = 'Tidak ada data pada periode ini.';
+        emptyCell.font = { name: 'Calibri', size: 10, italic: true, color: { argb: COLOR_SUMMARY_LABEL } };
+        emptyCell.alignment = { horizontal: 'center' };
+        r++;
+    }
+
+    groups.forEach((group) => {
+        group.rows.forEach((rowData, idx) => {
+            columns.forEach((col, colIdx) => {
+                const cell = sheet.getCell(r, colIdx + 1);
+                cell.border = gridBorder;
+                cell.font = { name: 'Calibri', size: 9.5 };
+                cell.alignment = { horizontal: col.align || 'left', vertical: 'middle' };
+
+                if (col.key === 'no') {
+                    cell.value = idx === 0 ? group.no : null;
+                } else if (col.key === 'namaBarang') {
+                    cell.value = idx === 0 ? group.namaBarang : null;
+                } else if (col.key === 'total') {
+                    cell.value = { formula: `G${r}*H${r}` };
+                    cell.numFmt = '#,##0';
+                } else if (col.key === 'harga') {
+                    cell.value = rowData.harga;
+                    cell.numFmt = '#,##0';
+                } else {
+                    cell.value = rowData[col.key] ?? null;
+                }
+            });
+            r++;
+        });
+        r++; // baris pemisah antar grup (tanpa border), seperti template
+    });
+
+    const lastDataRow = groups.length === 0 ? firstDataRow : r - 2;
+    const totalRow = groups.length === 0 ? r + 1 : r;
+
+    if (groups.length > 0) {
+        sheet.getCell(totalRow, 4).value = { formula: `SUM(D${firstDataRow}:D${lastDataRow})` };
+        sheet.getCell(totalRow, 4).numFmt = '#,##0';
+        sheet.getCell(totalRow, 4).font = { name: 'Calibri', size: 9.5 };
+        sheet.getCell(totalRow, 4).alignment = { horizontal: 'center' };
+
+        sheet.getCell(totalRow, 7).value = { formula: `SUM(G${firstDataRow}:G${lastDataRow})` };
+        sheet.getCell(totalRow, 7).numFmt = '#,##0';
+        sheet.getCell(totalRow, 7).font = { name: 'Calibri', size: 9.5 };
+        sheet.getCell(totalRow, 7).alignment = { horizontal: 'center' };
+
+        sheet.getCell(3, 9).value = { formula: `D${totalRow}` };
+        sheet.getCell(4, 9).value = { formula: `SUM(E${firstDataRow}:E${lastDataRow})` };
+        sheet.getCell(5, 9).value = { formula: `G${totalRow}` };
+    } else {
+        sheet.getCell(3, 9).value = 0;
+        sheet.getCell(4, 9).value = 0;
+        sheet.getCell(5, 9).value = 0;
+    }
+    [3, 4, 5].forEach((rr) => {
+        sheet.getCell(rr, 9).numFmt = '#,##0';
+        sheet.getCell(rr, 9).font = { name: 'Calibri', size: 9, bold: true };
+    });
+
+    // ===== Kotak TOTAL nilai =====
+    const totalLabelRow = totalRow + 1;
+    sheet.getCell(totalLabelRow, 8).value = 'TOTAL';
+    sheet.getCell(totalLabelRow, 8).font = { name: 'Calibri', size: 10, bold: true };
+    sheet.getCell(totalLabelRow, 8).alignment = { horizontal: 'center' };
+    sheet.getCell(totalLabelRow, 8).border = gridBorder;
+
+    sheet.getCell(totalLabelRow, 9).value =
+        groups.length > 0 ? { formula: `SUM(I${firstDataRow}:I${totalRow})` } : 0;
+    sheet.getCell(totalLabelRow, 9).numFmt = '#,##0';
+    sheet.getCell(totalLabelRow, 9).font = { name: 'Calibri', size: 10, bold: true };
+    sheet.getCell(totalLabelRow, 9).alignment = { horizontal: 'right' };
+    sheet.getCell(totalLabelRow, 9).border = gridBorder;
+
+    await sendWorkbook(res, workbook, filename);
 };
