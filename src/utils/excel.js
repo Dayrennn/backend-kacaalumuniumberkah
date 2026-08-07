@@ -5,20 +5,14 @@ export const buildDateFilter = (startDate, endDate) => {
     if (startDate || endDate) {
         where.createdAt = {};
         if (startDate) {
-            const start = new Date(startDate);
-            if (isNaN(start.getTime())) {
-                throw new Error('Format Start Date Tidak Valid');
-            }
-            start.setHours(0, 0, 0, 0);
-            where.createdAt.gte = start;
+            const [y, m, d] = startDate.split('-').map(Number);
+            if (!y || !m || !d) throw new Error('Format Start Date Tidak Valid');
+            where.createdAt.gte = new Date(y, m - 1, d, 0, 0, 0, 0);
         }
         if (endDate) {
-            const end = new Date(endDate);
-            if (isNaN(end.getTime())) {
-                throw new Error('Format End Date Tidak Valid');
-            }
-            end.setHours(23, 59, 59, 999);
-            where.createdAt.lte = end;
+            const [y, m, d] = endDate.split('-').map(Number);
+            if (!y || !m || !d) throw new Error('Format End Date Tidak Valid');
+            where.createdAt.lte = new Date(y, m - 1, d, 23, 59, 59, 999);
         }
     }
     return where;
@@ -61,10 +55,7 @@ const thinBorder = {
 };
 
 const sendWorkbook = async (res, workbook, filename) => {
-    res.setHeader(
-        'Content-Type',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    );
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     await workbook.xlsx.write(res);
     res.end();
@@ -216,7 +207,9 @@ export const renderLaporanStokGabunganExcel = async ({ res, judul, startDate, en
         { key: 'harga', label: 'Harga/L', width: 12, align: 'right' },
         { key: 'total', label: 'Total', width: 14, align: 'right' },
     ];
-    columns.forEach((c, i) => { sheet.getColumn(i + 1).width = c.width; });
+    columns.forEach((c, i) => {
+        sheet.getColumn(i + 1).width = c.width;
+    });
 
     const periodeText = startDate
         ? `${formatTanggal(startDate)}${endDate && endDate !== startDate ? ` s/d ${formatTanggal(endDate)}` : ''}`
@@ -323,8 +316,7 @@ export const renderLaporanStokGabunganExcel = async ({ res, judul, startDate, en
     sheet.getCell(totalLabelRow, 8).alignment = { horizontal: 'center' };
     sheet.getCell(totalLabelRow, 8).border = gridBorder;
 
-    sheet.getCell(totalLabelRow, 9).value =
-        groups.length > 0 ? { formula: `SUM(I${firstDataRow}:I${totalRow})` } : 0;
+    sheet.getCell(totalLabelRow, 9).value = groups.length > 0 ? { formula: `SUM(I${firstDataRow}:I${totalRow})` } : 0;
     sheet.getCell(totalLabelRow, 9).numFmt = '#,##0';
     sheet.getCell(totalLabelRow, 9).font = { name: 'Calibri', size: 10, bold: true };
     sheet.getCell(totalLabelRow, 9).alignment = { horizontal: 'right' };

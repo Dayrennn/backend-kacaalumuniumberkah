@@ -21,7 +21,7 @@ export const printLaporanKeluar = async (req, res) => {
 export const printLaporanGabungan = async (req, res) => {
     try {
         const { startDate, endDate, judul } = req.query;
-        await cetakLaporanStokGabungan(res, { startDate, endDate });
+        await cetakLaporanStokGabungan(res, { startDate, endDate, judul });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
