@@ -1,9 +1,4 @@
-import {
-    addProdukAds,
-    getProdukAds,
-    removeProdukAds,
-    updateProdukAds,
-} from '../service/produkAdsService.js';
+import { addProdukAds, getProdukAds, removeProdukAds, updateProdukAds } from '../service/produkAdsService.js';
 
 export const createAds = async (req, res) => {
     try {
@@ -16,7 +11,6 @@ export const createAds = async (req, res) => {
         if (!image) {
             return res.status(400).json({ message: 'Gambar Wajib di Upload' });
         }
-
 
         const produkAds = await addProdukAds({
             barangId,
@@ -58,8 +52,8 @@ export const modifyProdukAds = async (req, res) => {
 
 export const seeAllProdukAds = async (req, res) => {
     try {
-        const { page, limit } = req.query;
-        const result = await getProdukAds({ page, limit });
+        const { page, limit, search } = req.query;
+        const result = await getProdukAds({ page, limit, search });
 
         return res.status(200).json({
             message: 'Berhasil Ambil Data Iklan',

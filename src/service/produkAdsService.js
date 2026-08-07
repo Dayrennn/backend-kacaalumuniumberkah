@@ -52,11 +52,23 @@ export const addProdukAds = async ({ barangId, deskripsi, imageBuffer }) => {
     }
 };
 
-export const getProdukAds = async ({ page = 1, limit = 10 } = {}) => {
+export const getProdukAds = async ({ page = 1, limit = 10, search = '' }) => {
     const skip = (page - 1) * Number(limit);
+
+    const where = search?.trim()
+        ? {
+              barang: {
+                  namaBarang: {
+                      contains: search.trim(),
+                      mode: 'insensitive',
+                  },
+              },
+          }
+        : {};
 
     const [result, total] = await Promise.all([
         prisma.produkAds.findMany({
+            where,
             skip,
             take: Number(limit),
             orderBy: { id: 'desc' },
@@ -80,7 +92,7 @@ export const getProdukAds = async ({ page = 1, limit = 10 } = {}) => {
                 },
             },
         }),
-        prisma.produkAds.count(),
+        prisma.produkAds.count({ where }), 
     ]);
 
     return {
@@ -88,6 +100,7 @@ export const getProdukAds = async ({ page = 1, limit = 10 } = {}) => {
         meta: {
             total,
             page: Number(page),
+            limit: Number(limit),
             totalPages: Math.ceil(total / limit),
         },
     };
