@@ -180,10 +180,12 @@ export const renderLaporanExcel = async ({
 /**
  * Renderer khusus Laporan Stok Gabungan, mengikuti persis format
  * template "STOK KACA LEGOK" (NO, Nama Barang, UK Barang, Stok Awal,
- * Masuk, Keluar, Stock Akhir, Harga/L, Total) dengan grup per nama barang
- * dan formula (bukan angka statis).
+ * Masuk, Keluar, Stock Akhir, Harga/L, Total, Harga Beli) dengan grup
+ * per nama barang dan formula (bukan angka statis). Bisa menggambar
+ * lebih dari satu tabel (section) dalam satu sheet, misalnya
+ * tabel PCS di atas dan tabel Potongan di bawahnya.
  */
-export const renderLaporanStokGabunganExcel = async ({ res, judul, startDate, endDate, groups, filename }) => {
+export const renderLaporanStokGabunganExcel = async ({ res, judul, startDate, endDate, sections, filename }) => {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Stok Gabungan', { views: [{ showGridLines: false }] });
 
@@ -206,6 +208,7 @@ export const renderLaporanStokGabunganExcel = async ({ res, judul, startDate, en
         { key: 'stokAkhir', label: 'Stock akhir', width: 11, align: 'center' },
         { key: 'harga', label: 'Harga/L', width: 12, align: 'right' },
         { key: 'total', label: 'Total', width: 14, align: 'right' },
+        { key: 'hargaBeli', label: 'Harga Beli', width: 14, align: 'right' },
     ];
     columns.forEach((c, i) => {
         sheet.getColumn(i + 1).width = c.width;
@@ -216,111 +219,148 @@ export const renderLaporanStokGabunganExcel = async ({ res, judul, startDate, en
         : 'SEMUA PERIODE';
     const judulLaporan = judul ?? 'LAPORAN STOK BARANG';
 
-    // ===== Judul (2 baris, seperti template) =====
+    // ===== Judul utama laporan (sekali di paling atas) =====
     sheet.mergeCells(1, 1, 2, columns.length);
     const titleCell = sheet.getCell(1, 1);
     titleCell.value = `${judulLaporan.toUpperCase()} ${periodeText}`;
     titleCell.font = { name: 'Calibri', size: 14, bold: true };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-    // ===== Ringkasan (STOK AWAL / MASUK / AKHIR) — nilainya formula, diisi belakangan =====
-    sheet.getCell(3, 1).value = 'STOK BARANG AWAL';
-    sheet.getCell(3, 1).font = { name: 'Calibri', size: 11, bold: true };
-    sheet.getCell(4, 1).value = 'BARANG MASUK';
-    sheet.getCell(4, 1).font = { name: 'Calibri', size: 11, bold: true };
-    sheet.getCell(5, 1).value = 'STOK BARANG AKHIR';
-    sheet.getCell(5, 1).font = { name: 'Calibri', size: 11, bold: true };
+    let row = 4; // beri jarak dari judul utama sebelum tabel pertama mulai
 
-    // ===== Header tabel (baris 6) =====
-    const headerRowIdx = 6;
-    columns.forEach((col, i) => {
-        const cell = sheet.getCell(headerRowIdx, i + 1);
-        cell.value = col.label;
-        cell.font = { name: 'Calibri', size: 9.5, bold: true };
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_HEADER_BG } };
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
-        cell.border = gridBorder;
-    });
+    // ===== Gambar satu tabel (dipanggil per section: PCS, lalu Potongan) =====
+    const drawTable = (startRow, sectionTitle, groups) => {
+        let r = startRow;
 
-    // ===== Baris data, dikelompokkan per Nama Barang (mengikuti pola template) =====
-    let r = headerRowIdx + 2; // baris 7 kosong seperti template asli, data mulai baris 8
-    const firstDataRow = r;
-
-    if (groups.length === 0) {
+        // Sub-judul tabel (mis. "BARANG PCS")
         sheet.mergeCells(r, 1, r, columns.length);
-        const emptyCell = sheet.getCell(r, 1);
-        emptyCell.value = 'Tidak ada data pada periode ini.';
-        emptyCell.font = { name: 'Calibri', size: 10, italic: true, color: { argb: COLOR_SUMMARY_LABEL } };
-        emptyCell.alignment = { horizontal: 'center' };
-        r++;
-    }
+        const subTitleCell = sheet.getCell(r, 1);
+        subTitleCell.value = sectionTitle;
+        subTitleCell.font = { name: 'Calibri', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+        subTitleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
+        subTitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        sheet.getRow(r).height = 20;
+        r += 2;
 
-    groups.forEach((group) => {
-        group.rows.forEach((rowData, idx) => {
-            columns.forEach((col, colIdx) => {
-                const cell = sheet.getCell(r, colIdx + 1);
-                cell.border = gridBorder;
-                cell.font = { name: 'Calibri', size: 9.5 };
-                cell.alignment = { horizontal: col.align || 'left', vertical: 'middle' };
+        // Ringkasan mini per tabel (STOK AWAL / MASUK / AKHIR)
+        const ringkasanLabelRow = r;
+        sheet.getCell(ringkasanLabelRow, 1).value = 'STOK BARANG AWAL';
+        sheet.getCell(ringkasanLabelRow, 1).font = { name: 'Calibri', size: 11, bold: true };
+        sheet.getCell(ringkasanLabelRow + 1, 1).value = 'BARANG MASUK';
+        sheet.getCell(ringkasanLabelRow + 1, 1).font = { name: 'Calibri', size: 11, bold: true };
+        sheet.getCell(ringkasanLabelRow + 2, 1).value = 'STOK BARANG AKHIR';
+        sheet.getCell(ringkasanLabelRow + 2, 1).font = { name: 'Calibri', size: 11, bold: true };
+        r = ringkasanLabelRow + 4;
 
-                if (col.key === 'no') {
-                    cell.value = idx === 0 ? group.no : null;
-                } else if (col.key === 'namaBarang') {
-                    cell.value = idx === 0 ? group.namaBarang : null;
-                } else if (col.key === 'total') {
-                    cell.value = { formula: `G${r}*H${r}` };
-                    cell.numFmt = '#,##0';
-                } else if (col.key === 'harga') {
-                    cell.value = rowData.harga;
-                    cell.numFmt = '#,##0';
-                } else {
-                    cell.value = rowData[col.key] ?? null;
-                }
-            });
-            r++;
+        // Header tabel
+        const headerRowIdx = r;
+        columns.forEach((col, i) => {
+            const cell = sheet.getCell(headerRowIdx, i + 1);
+            cell.value = col.label;
+            cell.font = { name: 'Calibri', size: 9.5, bold: true };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_HEADER_BG } };
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            cell.border = gridBorder;
         });
-        r++; // baris pemisah antar grup (tanpa border), seperti template
+        r = headerRowIdx + 2;
+        const firstDataRow = r;
+
+        if (groups.length === 0) {
+            sheet.mergeCells(r, 1, r, columns.length);
+            const emptyCell = sheet.getCell(r, 1);
+            emptyCell.value = 'Tidak ada data pada periode ini.';
+            emptyCell.font = { name: 'Calibri', size: 10, italic: true, color: { argb: COLOR_SUMMARY_LABEL } };
+            emptyCell.alignment = { horizontal: 'center' };
+            r++;
+        }
+
+        groups.forEach((group) => {
+            group.rows.forEach((rowData, idx) => {
+                columns.forEach((col, colIdx) => {
+                    const cell = sheet.getCell(r, colIdx + 1);
+                    cell.border = gridBorder;
+                    cell.font = { name: 'Calibri', size: 9.5 };
+                    cell.alignment = { horizontal: col.align || 'left', vertical: 'middle' };
+
+                    if (col.key === 'no') {
+                        cell.value = idx === 0 ? group.no : null;
+                    } else if (col.key === 'namaBarang') {
+                        cell.value = idx === 0 ? group.namaBarang : null;
+                    } else if (col.key === 'total') {
+                        cell.value = { formula: `G${r}*H${r}` };
+                        cell.numFmt = '#,##0';
+                    } else if (col.key === 'harga') {
+                        cell.value = rowData.harga;
+                        cell.numFmt = '#,##0';
+                    } else if (col.key === 'hargaBeli') {
+                        cell.value = rowData.hargaBeli ?? null;
+                        cell.numFmt = '#,##0';
+                    } else {
+                        cell.value = rowData[col.key] ?? null;
+                    }
+                });
+                r++;
+            });
+            r++; // baris pemisah antar grup
+        });
+
+        const lastDataRow = groups.length === 0 ? firstDataRow : r - 2;
+        const totalRow = groups.length === 0 ? r + 1 : r;
+
+        if (groups.length > 0) {
+            sheet.getCell(totalRow, 4).value = { formula: `SUM(D${firstDataRow}:D${lastDataRow})` };
+            sheet.getCell(totalRow, 4).numFmt = '#,##0';
+            sheet.getCell(totalRow, 4).font = { name: 'Calibri', size: 9.5 };
+            sheet.getCell(totalRow, 4).alignment = { horizontal: 'center' };
+
+            sheet.getCell(totalRow, 7).value = { formula: `SUM(G${firstDataRow}:G${lastDataRow})` };
+            sheet.getCell(totalRow, 7).numFmt = '#,##0';
+            sheet.getCell(totalRow, 7).font = { name: 'Calibri', size: 9.5 };
+            sheet.getCell(totalRow, 7).alignment = { horizontal: 'center' };
+
+            // Total Harga Beli (kolom J)
+            sheet.getCell(totalRow, 10).value = { formula: `SUM(J${firstDataRow}:J${lastDataRow})` };
+            sheet.getCell(totalRow, 10).numFmt = '#,##0';
+            sheet.getCell(totalRow, 10).font = { name: 'Calibri', size: 9.5, bold: true };
+            sheet.getCell(totalRow, 10).alignment = { horizontal: 'right' };
+
+            sheet.getCell(ringkasanLabelRow, 9).value = { formula: `D${totalRow}` };
+            sheet.getCell(ringkasanLabelRow + 1, 9).value = { formula: `SUM(E${firstDataRow}:E${lastDataRow})` };
+            sheet.getCell(ringkasanLabelRow + 2, 9).value = { formula: `G${totalRow}` };
+        } else {
+            sheet.getCell(ringkasanLabelRow, 9).value = 0;
+            sheet.getCell(ringkasanLabelRow + 1, 9).value = 0;
+            sheet.getCell(ringkasanLabelRow + 2, 9).value = 0;
+
+            sheet.getCell(totalRow, 10).value = 0;
+            sheet.getCell(totalRow, 10).numFmt = '#,##0';
+        }
+        [ringkasanLabelRow, ringkasanLabelRow + 1, ringkasanLabelRow + 2].forEach((rr) => {
+            sheet.getCell(rr, 9).numFmt = '#,##0';
+            sheet.getCell(rr, 9).font = { name: 'Calibri', size: 9, bold: true };
+        });
+
+        // Kotak TOTAL nilai
+        const totalLabelRow = totalRow + 1;
+        sheet.getCell(totalLabelRow, 8).value = 'TOTAL';
+        sheet.getCell(totalLabelRow, 8).font = { name: 'Calibri', size: 10, bold: true };
+        sheet.getCell(totalLabelRow, 8).alignment = { horizontal: 'center' };
+        sheet.getCell(totalLabelRow, 8).border = gridBorder;
+
+        sheet.getCell(totalLabelRow, 9).value =
+            groups.length > 0 ? { formula: `SUM(I${firstDataRow}:I${totalRow})` } : 0;
+        sheet.getCell(totalLabelRow, 9).numFmt = '#,##0';
+        sheet.getCell(totalLabelRow, 9).font = { name: 'Calibri', size: 10, bold: true };
+        sheet.getCell(totalLabelRow, 9).alignment = { horizontal: 'right' };
+        sheet.getCell(totalLabelRow, 9).border = gridBorder;
+
+        return totalLabelRow + 3; // baris kosong sebelum tabel berikutnya
+    };
+
+    // Gambar tiap section (PCS lalu Potongan) berurutan di sheet yang sama
+    sections.forEach(({ title, groups }) => {
+        row = drawTable(row, title, groups);
     });
-
-    const lastDataRow = groups.length === 0 ? firstDataRow : r - 2;
-    const totalRow = groups.length === 0 ? r + 1 : r;
-
-    if (groups.length > 0) {
-        sheet.getCell(totalRow, 4).value = { formula: `SUM(D${firstDataRow}:D${lastDataRow})` };
-        sheet.getCell(totalRow, 4).numFmt = '#,##0';
-        sheet.getCell(totalRow, 4).font = { name: 'Calibri', size: 9.5 };
-        sheet.getCell(totalRow, 4).alignment = { horizontal: 'center' };
-
-        sheet.getCell(totalRow, 7).value = { formula: `SUM(G${firstDataRow}:G${lastDataRow})` };
-        sheet.getCell(totalRow, 7).numFmt = '#,##0';
-        sheet.getCell(totalRow, 7).font = { name: 'Calibri', size: 9.5 };
-        sheet.getCell(totalRow, 7).alignment = { horizontal: 'center' };
-
-        sheet.getCell(3, 9).value = { formula: `D${totalRow}` };
-        sheet.getCell(4, 9).value = { formula: `SUM(E${firstDataRow}:E${lastDataRow})` };
-        sheet.getCell(5, 9).value = { formula: `G${totalRow}` };
-    } else {
-        sheet.getCell(3, 9).value = 0;
-        sheet.getCell(4, 9).value = 0;
-        sheet.getCell(5, 9).value = 0;
-    }
-    [3, 4, 5].forEach((rr) => {
-        sheet.getCell(rr, 9).numFmt = '#,##0';
-        sheet.getCell(rr, 9).font = { name: 'Calibri', size: 9, bold: true };
-    });
-
-    // ===== Kotak TOTAL nilai =====
-    const totalLabelRow = totalRow + 1;
-    sheet.getCell(totalLabelRow, 8).value = 'TOTAL';
-    sheet.getCell(totalLabelRow, 8).font = { name: 'Calibri', size: 10, bold: true };
-    sheet.getCell(totalLabelRow, 8).alignment = { horizontal: 'center' };
-    sheet.getCell(totalLabelRow, 8).border = gridBorder;
-
-    sheet.getCell(totalLabelRow, 9).value = groups.length > 0 ? { formula: `SUM(I${firstDataRow}:I${totalRow})` } : 0;
-    sheet.getCell(totalLabelRow, 9).numFmt = '#,##0';
-    sheet.getCell(totalLabelRow, 9).font = { name: 'Calibri', size: 10, bold: true };
-    sheet.getCell(totalLabelRow, 9).alignment = { horizontal: 'right' };
-    sheet.getCell(totalLabelRow, 9).border = gridBorder;
 
     await sendWorkbook(res, workbook, filename);
 };

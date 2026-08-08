@@ -2,7 +2,7 @@ import prisma from '../config/prisma.js';
 import { hitungTotalHarga } from '../utils/hitungTotalHarga.js';
 
 // barang masuk
-export const barangMasuk = async ({ barangId, jumlah, keterangan, suplier }, userId) => {
+export const barangMasuk = async ({ barangId, jumlah, keterangan, suplier, totalHarga }, userId) => {
     if (!barangId) {
         throw new Error('Barang Id Tidak Ditemukan');
     }
@@ -17,6 +17,15 @@ export const barangMasuk = async ({ barangId, jumlah, keterangan, suplier }, use
 
     if (!userId) {
         throw new Error('User Tidak Ditemukan');
+    }
+
+    let totalHargaFinal = null;
+    if (totalHarga !== undefined && totalHarga !== null && totalHarga !== '') {
+        const parsedHarga = Number(totalHarga);
+        if (isNaN(parsedHarga) || parsedHarga < 0) {
+            throw new Error('Total Harga Tidak Valid');
+        }
+        totalHargaFinal = parsedHarga;
     }
 
     const barang = await prisma.barang.findUnique({
@@ -49,6 +58,7 @@ export const barangMasuk = async ({ barangId, jumlah, keterangan, suplier }, use
                 stokSesudah,
                 keterangan,
                 suplier,
+                totalHarga: totalHargaFinal,
             },
             include: {
                 barang: true,

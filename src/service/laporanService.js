@@ -155,55 +155,73 @@ export const cetakLaporanStokGabungan = async (res, { startDate, endDate, judul 
         mutasiByBarang.get(m.barangId).push(m);
     });
 
-    // Hitung Stok Awal/Masuk/Keluar/Stok Akhir per barang, lalu kelompokkan per Nama Barang
-    const groups = [];
-    let currentGroup = null;
-    let groupCounter = 0;
+    // Helper: bangun "groups" (grouping per namaBarang) dari sebuah list barang.
+    // Dipakai terpisah untuk kelompok PCS dan kelompok Potongan.
+    const buildGroups = (listBarang) => {
+        const groups = [];
+        let currentGroup = null;
+        let groupCounter = 0;
 
-    for (const barang of semuaBarang) {
-        const mutasiPeriode = mutasiByBarang.get(barang.id) || [];
+        for (const barang of listBarang) {
+            const mutasiPeriode = mutasiByBarang.get(barang.id) || [];
 
-        // Hanya tampilkan barang yang memiliki aktivitas
-        // pada periode yang dipilih
-        if (mutasiPeriode.length === 0) {
-            continue;
-        }
+            if (mutasiPeriode.length === 0) continue;
 
-        const masuk = mutasiPeriode.filter((m) => m.tipe === 'Masuk').reduce((s, m) => s + m.jumlah, 0);
-        const keluar = mutasiPeriode.filter((m) => m.tipe === 'Keluar').reduce((s, m) => s + m.jumlah, 0);
-        const stokAwal = mutasiPeriode[0].stokSebelum;
-        const stokAkhir = mutasiPeriode[mutasiPeriode.length - 1].stokSesudah;
+            const masuk = mutasiPeriode.filter((m) => m.tipe === 'Masuk').reduce((s, m) => s + m.jumlah, 0);
+            const keluar = mutasiPeriode.filter((m) => m.tipe === 'Keluar').reduce((s, m) => s + m.jumlah, 0);
 
-        const rowData = {
-            ukuran: barang.ukuran ?? '-',
-            stokAwal,
-            masuk,
-            keluar,
-            stokAkhir,
-            harga: barang.harga,
-        };
+            // Jumlahkan totalHarga dari mutasi Masuk (harga beli yang diinput manual
+            // saat input barang masuk). Mutasi Masuk yang totalHarga-nya null (tidak
+            // diisi) tidak ikut dijumlahkan.
+            const hargaBeli = mutasiPeriode
+                .filter((m) => m.tipe === 'Masuk' && m.totalHarga !== null && m.totalHarga !== undefined)
+                .reduce((s, m) => s + m.totalHarga, 0);
 
-        if (currentGroup && currentGroup.namaBarang === barang.namaBarang) {
-            currentGroup.rows.push(rowData);
-        } else {
-            groupCounter++;
+            const stokAwal = mutasiPeriode[0].stokSebelum;
+            const stokAkhir = mutasiPeriode[mutasiPeriode.length - 1].stokSesudah;
 
-            currentGroup = {
-                no: groupCounter,
-                namaBarang: barang.namaBarang,
-                rows: [rowData],
+            const rowData = {
+                ukuran: barang.ukuran ?? '-',
+                stokAwal,
+                masuk,
+                keluar,
+                stokAkhir,
+                harga: barang.harga,
+                hargaBeli,
             };
 
-            groups.push(currentGroup);
+            if (currentGroup && currentGroup.namaBarang === barang.namaBarang) {
+                currentGroup.rows.push(rowData);
+            } else {
+                groupCounter++;
+                currentGroup = {
+                    no: groupCounter,
+                    namaBarang: barang.namaBarang,
+                    rows: [rowData],
+                };
+                groups.push(currentGroup);
+            }
         }
-    }
+
+        return groups;
+    };
+
+    // Pisah barang jadi 2 kelompok besar berdasarkan jenisPenjualan
+    const barangPCS = semuaBarang.filter((b) => b.jenisPenjualan === 'PCS');
+    const barangPotongan = semuaBarang.filter((b) => b.jenisPenjualan === 'Potongan');
+
+    const groupsPCS = buildGroups(barangPCS);
+    const groupsPotongan = buildGroups(barangPotongan);
 
     await renderLaporanStokGabunganExcel({
         res,
         judul: judul ?? 'LAPORAN STOK BARANG',
         startDate,
         endDate,
-        groups,
+        sections: [
+            { title: 'BARANG PCS', groups: groupsPCS },
+            { title: 'BARANG POTONGAN', groups: groupsPotongan },
+        ],
         filename: `laporan-stok-gabungan-${Date.now()}.xlsx`,
     });
 };
