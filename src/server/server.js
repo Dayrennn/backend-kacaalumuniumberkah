@@ -20,7 +20,11 @@ const port = 3000;
 app.use(morgan('dev'));
 app.use(
     cors({
-        origin: ['http://localhost:3001', 'https://frontend-kacaalumuniumberkah.vercel.app'],
+        origin: [
+            'http://localhost:3001',
+            'https://frontend-kacaalumuniumberkah.vercel.app',
+            'https://kacaalumuniumberkah.netlify.app',
+        ],
         credentials: true,
     }),
 );
