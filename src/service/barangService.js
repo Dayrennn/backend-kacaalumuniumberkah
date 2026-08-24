@@ -184,6 +184,19 @@ export const deleteBarang = async (id, { namaBarang }) => {
         throw new Error('Nama Barang Tidak Sesuai');
     }
 
+    await Promise.all([
+        prisma.mutasiStok.deleteMany({
+            where: {
+                id: id,
+            },
+        }),
+        prisma.produkAds.deleteMany({
+            where: {
+                id: id,
+            },
+        }),
+    ]);
+
     const remove = await prisma.barang.delete({
         where: { id },
     });
